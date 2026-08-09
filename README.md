@@ -72,7 +72,7 @@ smart-workspace-assistant/
     .gitignore
     README.md
     requirements.txt
-
+```
 ## Installation
 
 Create a virtual environment:
