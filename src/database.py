@@ -1,57 +1,137 @@
-import sqlite3
+from sqlalchemy import create_engine, String, Boolean, ForeignKey, select
+from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
+from passlib.context import CryptContext
+from config.config import DATABASE_URL
 
-connection = sqlite3.connect(
-    "smart_workspace.db",
-    check_same_thread=False)
-
-cursor = connection.cursor()
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS tasks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL
-)
-""")
-def create_task(title):
-    cursor.execute("""
-    INSERT INTO tasks (title)
-    VALUES (?)
-    """, 
-    (title,))
-
-    connection.commit()
-
-
-
-def update_task(task_id, task_title):
-    cursor.execute(
-        "UPDATE tasks SET title = ? WHERE id=?",
-        (task_title, task_id)
-)
-    connection.commit()
-
-def delete_task(task_id):
-    cursor.execute(
-        "DELETE FROM tasks WHERE id=?",
-        (task_id,)
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto"
 )
 
-    connection.commit()
 
-def get_all_tasks():
-    cursor.execute(
-        "SELECT * FROM tasks"
-)
+engine = create_engine(DATABASE_URL)
 
-    rows = cursor.fetchall()
+SessionLocal = sessionmaker(bind=engine)
 
-    return rows
+class Base(DeclarativeBase):
+    pass
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    completed : Mapped[bool] = mapped_column(Boolean, default=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    password: Mapped[str] = mapped_column(String, nullable=False)
+    email: Mapped[str] = mapped_column(String, nullable=True)
+
+def create_user(username, password, email):
+    db = SessionLocal()
+    try:
+        hashed_password = pwd_context.hash(password)
+
+        new_user = User(
+            username=username,
+            password=hashed_password,
+            email=email
+        )
+
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return new_user
+    finally:
+        db.close()
+
+def get_user(username):
+    db = SessionLocal()
+    try:
+
+        stmt = select(User).where(User.username == username)
+        user = db.scalars(stmt).first()
+        return user
+    finally:
+        db.close()
+    
+
+def verify_password(password, hashed_password):
+    return pwd_context.verify(password, hashed_password)
+
+def create_task(title, user_id):
+    db = SessionLocal()
+
+    try:
+        new_task = Task(
+            title=title,
+            completed=False,
+            user_id=user_id
+        )
+
+        db.add(new_task)
+        db.commit()
+        db.refresh(new_task)
+        return new_task
+    finally:
+        db.close()
+    
+def get_all_tasks(user_id):
+    db = SessionLocal()
+    try:
+        stmt = select(Task).where(Task.user_id == user_id)
+        result = db.scalars(stmt)
+        tasks = result.all()
+        return tasks
+    finally:
+        db.close()  
 
 def get_task(task_id):
-    cursor.execute(
-        "SELECT * FROM tasks WHERE id=?",
-        (task_id,)
-    )
+    db = SessionLocal()
+    try:
 
-    rows = cursor.fetchone()
-    return rows
+        stmt = select(Task).where(Task.id == task_id)
+        result = db.scalars(stmt)
+        task = result.first()
+        return task
+    finally:
+        db.close()
+
+def update_task(task_id, title):
+    db = SessionLocal()
+    try:
+        stmt = select(Task).where(Task.id == task_id)
+        task = db.scalars(stmt).first()
+
+        if task is None:
+            return None
+    
+        task.title = title
+
+        db.commit()
+        return task
+    finally:
+        db.close()
+
+def delete_task(task_id):
+    db = SessionLocal()
+    try:
+
+        stmt = select(Task).where(Task.id == task_id)
+        task = db.scalars(stmt).first()
+
+        if task is None:
+            return None
+
+        db.delete(task)
+        db.commit()
+        return task
+    finally:
+        db.close()
+    
+Base.metadata.create_all(engine)

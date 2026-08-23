@@ -6,7 +6,7 @@ Smart Workspace Assistant is a Python-based project that started as a simple Com
 
 Version 1.0 focused on practicing Software Engineering fundamentals such as file management, JSON, exception handling, logging, clean code, Git, and CLI application development.
 
-Version 2.0 extends the project by using FastAPI and SQLite. The API provides basic CRUD operations for task management and connects the application to a SQLite database.
+Version 2.0 extends the project into a REST API backend built with FastAPI, PostgreSQL, and JWT authentication, developed as a learning project to practice backend engineering fundamentals. Each user can only access their own tasks, enforced through ownership checks at the API level. This backend is designed to later serve as the foundation for AI-powered applications.
 
 ## Version 1.0 - CLI
 
@@ -32,153 +32,199 @@ Technologies:
 
 ## Version 2.0 - REST API
 
-Version 2.0 extends the previous CLI application into a backend REST API using FastAPI and SQLite.
+Version 2.0 rebuilds the project as a backend REST API using FastAPI, PostgreSQL, SQLAlchemy, and JWT authentication.
 
 Main features:
 
-- REST API
-- HTTP methods
-- Request and response handling
-- Pydantic validation
-- Create task
-- Get all tasks
-- Get task by ID
-- Update task
-- Delete task
-- SQLite database integration
-- HTTP error handling
-- API testing using Swagger UI
+- REST API with FastAPI
+- User registration and login
+- Password hashing with bcrypt
+- JWT-based authentication (OAuth2PasswordBearer)
+- Protected endpoints using `Depends`
+- Task CRUD (Create, Read, Update, Delete)
+- Task ownership: each task belongs to a user, enforced with a foreign key
+- Authorization checks: users can only access their own tasks (401 / 403 / 404 handling)
+- Database migrations with Alembic
+- Environment variables for configuration (`.env`)
+- Centralized error handling, including a global exception handler
+- Automated testing with pytest
+- Auto-generated API documentation via Swagger UI
 
 Technologies:
 
 - Python
 - FastAPI
 - Pydantic
-- SQLite
+- PostgreSQL
+- SQLAlchemy
+- Alembic
+- python-jose (JWT)
+- passlib + bcrypt (password hashing)
+- python-dotenv
+- pytest + httpx (testing)
 - Uvicorn
 
 ## Project Structure
 
-```text
+```
 smart-workspace-assistant/
+    alembic/              # Database migrations
     config/
-    data/
-    logs/
-    reports/
+        config.py         # Loads environment variables
     src/
         __init__.py
-        main.py
-        database.py
+        main.py            # FastAPI app and endpoints
+        database.py         # SQLAlchemy models and queries
+        schemas.py           # Pydantic request/response models
+        auth.py               # JWT authentication logic
+    tests/
+        test_main.py          # pytest test suite
+    conftest.py
+    alembic.ini
     .gitignore
+    .env                       # Not committed (see .gitignore)
     README.md
     requirements.txt
 ```
+
 ## Installation
 
 Create a virtual environment:
 
-```bash
+```
 python -m venv .venv
 ```
 
 Activate the virtual environment on Windows PowerShell:
 
-```powershell
+```
 .venv\Scripts\Activate.ps1
 ```
 
 Install the project dependencies:
 
-```bash
+```
 pip install -r requirements.txt
+```
+
+Create a `.env` file in the project root with the following variables:
+
+```
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost/smart_workspace
+SECRET_KEY=your-secret-key-here
+```
+
+Run database migrations:
+
+```
+alembic upgrade head
 ```
 
 ## How to Run
 
 Start the FastAPI application using Uvicorn:
 
-```bash
+```
 uvicorn src.main:app --reload
 ```
 
 The API will be available at:
 
-```text
+```
 http://127.0.0.1:8000
 ```
 
 Swagger UI is available at:
 
-```text
+```
 http://127.0.0.1:8000/docs
 ```
 
 ## API Endpoints
 
-- `GET /` - Get API information
-- `GET /about` - Get project information
-- `GET /search` - Search endpoint example
-- `POST /tasks` - Create a task
-- `GET /tasks` - Get all tasks
-- `GET /tasks/{task_id}` - Get a task by ID
-- `PUT /tasks/{task_id}` - Update a task
-- `DELETE /tasks/{task_id}` - Delete a task
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|--------------|----------------|
+| GET | `/` | API root info | No |
+| GET | `/about` | Project info | No |
+| POST | `/users` | Register a new user | No |
+| POST | `/login` | Login and receive a JWT token | No |
+| POST | `/tasks` | Create a task | Yes |
+| GET | `/tasks` | Get all tasks owned by the current user | Yes |
+| GET | `/tasks/{task_id}` | Get a task by ID (owner only) | Yes |
+| PUT | `/tasks/{task_id}` | Update a task (owner only) | Yes |
+| DELETE | `/tasks/{task_id}` | Delete a task (owner only) | Yes |
+| GET | `/search` | Search endpoint (in progress) | No |
 
 ## Database
 
-Version 2.0 uses SQLite to store task data.
+Version 2.0 uses PostgreSQL, managed through SQLAlchemy ORM and versioned with Alembic migrations.
 
-The database contains a `tasks` table with:
+**users** table:
+- `id`
+- `username` (unique)
+- `password` (hashed with bcrypt)
+- `email`
 
+**tasks** table:
 - `id`
 - `title`
+- `completed`
+- `user_id` (foreign key referencing `users.id`)
 
-The database operations are implemented in:
+Each task belongs to exactly one user. Ownership is enforced at the API layer, not just the database layer.
 
-```text
-src/database.py
-```
+## Authentication
 
-The FastAPI application is implemented in:
+Authentication uses JWT (JSON Web Token) with the OAuth2 password flow:
 
-```text
-src/main.py
-```
+1. User registers via `POST /users`
+2. User logs in via `POST /login` with username and password
+3. Server verifies the password and returns a JWT access token
+4. Client sends the token in the `Authorization: Bearer <token>` header
+5. Protected endpoints validate the token via `Depends(get_current_user)`
+6. The authenticated user's identity is used to enforce task ownership
 
-The local SQLite database file is excluded from Git using `.gitignore`.
+## Error Handling
+
+The API returns explicit HTTP status codes instead of leaking raw internal errors:
+
+- `401 Unauthorized` — missing or invalid authentication token
+- `403 Forbidden` — authenticated, but not the owner of the requested resource
+- `404 Not Found` — requested resource does not exist
+- `409 Conflict` — username already exists during registration
+- `500 Internal Server Error` — caught by a global exception handler, returns a generic safe message
 
 ## Testing
 
-The API was tested using Swagger UI.
+Automated tests are written with `pytest` and FastAPI's `TestClient`.
 
-The following operations were tested:
+Run the test suite:
 
-- Create a task
-- Get all tasks
-- Get a task by ID
-- Update a task
-- Delete a task
-- Get a deleted task and receive a 404 Not Found response
+```
+pytest
+```
 
-These tests confirmed that the FastAPI application is connected to the SQLite database and that the basic CRUD operations work correctly.
+Tests cover:
 
-## Screenshot
+- Public endpoint access
+- Rejecting unauthenticated requests to protected endpoints
+- Full registration → login → authenticated request flow
+- Duplicate username registration returning `409 Conflict`
 
-Swagger UI was used to test the API during development.
+## Future Improvement
 
-Screenshots can be added to this section in future updates.
-
-## Future Development
-
-Possible future improvements include:
-
-- PostgreSQL
-- SQLAlchemy
-- Alembic
-- Authentication
-- Environment variables
-- Integration with AI applications
+- Implement the `/search` endpoint to actually filter tasks by keyword
+- Add JWT token expiration
+- Add pagination for `GET /tasks`
+- Add refresh tokens
+- Expand test coverage (404, PUT, DELETE flows)
+- Deploy to a cloud environment
+- Integration with AI applications / AI agents
 
 ## Author
 
 Muhamad Padli Haikal
+
+## License
+
+MIT License

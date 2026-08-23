@@ -17,3 +17,6 @@ data/tasks_backup.json
 
 # Database 
 smart_workspace.db
+
+# Env
+.env
