@@ -133,5 +133,3 @@ def delete_task(task_id):
         return task
     finally:
         db.close()
-    
-Base.metadata.create_all(engine)
