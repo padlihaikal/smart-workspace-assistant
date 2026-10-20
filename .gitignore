@@ -20,3 +20,6 @@ smart_workspace.db
 
 # Env
 .env
+
+# Database Backup
+*.dump
