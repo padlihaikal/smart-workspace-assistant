@@ -7,19 +7,27 @@ from jose import (
     JWTError)
 from src.database import get_user
 from config.config import SECRET_KEY
+from datetime import datetime, timedelta, timezone
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-def create_access_token(username):
-    payload = {
-        "sub": username
-    }
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+def create_access_token(username: str):
+    to_encode = {"sub": username}
+
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+
+    to_encode.update({"exp": expire})
 
     token = jwt.encode(
-        payload,
+        to_encode,
         SECRET_KEY,
         algorithm="HS256"
     )
+    
     return token
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
