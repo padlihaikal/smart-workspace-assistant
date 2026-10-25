@@ -68,55 +68,60 @@ Technologies:
 
 ```
 smart-workspace-assistant/
-    alembic/              # Database migrations
-    config/
-        config.py         # Loads environment variables
-    src/
-        __init__.py
-        main.py            # FastAPI app and endpoints
-        database.py         # SQLAlchemy models and queries
-        schemas.py           # Pydantic request/response models
-        auth.py               # JWT authentication logic
-    tests/
-        test_main.py          # pytest test suite
-    conftest.py
-    alembic.ini
-    .gitignore
-    .env                       # Not committed (see .gitignore)
-    README.md
-    requirements.txt
+├── alembic/                  # Database migrations
+├── config/
+│   └── config.py             # Loads environment variables
+├── src/
+│   ├── __init__.py
+│   ├── main.py               # FastAPI app and endpoints
+│   ├── database.py           # SQLAlchemy models and queries
+│   ├── schemas.py            # Pydantic request/response models
+│   └── auth.py               # JWT authentication logic
+├── tests/
+│   ├── test_main.py          # pytest test suite
+│   └── conftest.py
+├── alembic.ini
+├── .gitignore
+├── .env                      # Not committed (see .gitignore)
+├── .env.example
+├── LICENSE
+├── README.md
+└── requirements.txt
 ```
 
 ## Installation
 
 Create a virtual environment:
 
-```
+```powershell
 python -m venv .venv
 ```
 
 Activate the virtual environment on Windows PowerShell:
 
-```
+```powershell
 .venv\Scripts\Activate.ps1
 ```
 
 Install the project dependencies:
 
-```
+```powershell
 pip install -r requirements.txt
 ```
 
-Create a `.env` file in the project root with the following variables:
+Create a `.env` file in the project root using `.env.example` as a template. Configure the following variables:
 
-```
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost/smart_workspace
+```env
+DATABASE_URL=postgresql+psycopg://postgres:your-password-here@localhost/smart_workspace
+TEST_DATABASE_URL=postgresql+psycopg://postgres:your-password-here@localhost:5432/smart_workspace_test
 SECRET_KEY=your-secret-key-here
 ```
 
+Replace the placeholder values with your local database credentials and a secure secret key. Do not commit real passwords or secrets to version control.
+
 Run database migrations:
 
-```
+```powershell
 alembic upgrade head
 ```
 
@@ -179,10 +184,10 @@ Authentication uses JWT (JSON Web Token) with the OAuth2 password flow:
 
 1. User registers via `POST /users`
 2. User logs in via `POST /login` with username and password
-3. Server verifies the password and returns a JWT access token
-4. Client sends the token in the `Authorization: Bearer <token>` header
-5. Protected endpoints validate the token via `Depends(get_current_user)`
-6. The authenticated user's identity is used to enforce task ownership
+3. Server verifies the password and returns a JWT access token valid for 30 minutes.
+4. Client sends the token in the `Authorization: Bearer <token>` header.
+5. Protected endpoints validate the token via `Depends(get_current_user)`.
+6. The authenticated user's identity is used to enforce task ownership.
 
 ## Error Handling
 
@@ -200,7 +205,7 @@ Automated tests are written with `pytest` and FastAPI's `TestClient`.
 
 Run the test suite:
 
-```
+```bash
 pytest
 ```
 
@@ -210,11 +215,19 @@ Tests cover:
 - Rejecting unauthenticated requests to protected endpoints
 - Full registration → login → authenticated request flow
 - Duplicate username registration returning `409 Conflict`
+- Expired JWT access tokens returning `401 Unauthorized`
+
+### Separate Test Database
+
+Tests use a separate PostgreSQL database named `smart_workspace_test`. The test database name must end with `_test` to help prevent tests from running against the development database.
+
+### Test Database Setup
+
+Before running tests, create the test database and run `alembic upgrade head` with `DATABASE_URL` pointing to the test database. Set `TEST_DATABASE_URL` in the `.env` file to the test database connection URL.
 
 ## Future Improvement
 
 - Implement the `/search` endpoint to actually filter tasks by keyword
-- Add JWT token expiration
 - Add pagination for `GET /tasks`
 - Add refresh tokens
 - Expand test coverage (404, PUT, DELETE flows)
