@@ -1,6 +1,7 @@
-from sqlalchemy import create_engine, String, Boolean, ForeignKey, select
+from sqlalchemy import create_engine, String, Boolean, ForeignKey, select, Text, DateTime
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, Mapped, mapped_column
 from passlib.context import CryptContext
+from datetime import datetime, timezone
 from config.config import DATABASE_URL
 
 pwd_context = CryptContext(
@@ -23,6 +24,20 @@ class Task(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     completed : Mapped[bool] = mapped_column(Boolean, default=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    file_name: Mapped[str] = mapped_column(String, nullable=False)
+    content_type: Mapped[str] = mapped_column(String, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id:Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
 
 class User(Base):
     __tablename__ = "users"
