@@ -95,6 +95,24 @@ def create_task(title, user_id):
         return new_task
     finally:
         db.close()
+
+def create_document(file_name, content_type, text, user_id):
+    db = SessionLocal()
+
+    try:
+        document = Document(
+            file_name=file_name,
+            content_type=content_type,
+            text=text,
+            user_id=user_id
+        )
+
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+        return document
+    finally:
+        db.close()
     
 def get_all_tasks(user_id):
     db = SessionLocal()
