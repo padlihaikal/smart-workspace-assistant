@@ -2,6 +2,7 @@ import io
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 from docx.opc.exceptions import PackageNotFoundError, OpcError
+from zipfile import BadZipFile
 from docx import Document
 
 def extract_text(content: bytes, content_type: str) -> str:
@@ -9,7 +10,10 @@ def extract_text(content: bytes, content_type: str) -> str:
     word_list = []
     
     if content_type == "text/plain":
-        text = content.decode("utf-8")
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise ValueError("File format must be UTF-8.")
 
         if not text.strip():
             raise ValueError("Extracted text is empty.")
@@ -46,7 +50,7 @@ def extract_text(content: bytes, content_type: str) -> str:
 
             full_text = "\n".join(word_list)
 
-        except (PackageNotFoundError, OpcError):
+        except (PackageNotFoundError, OpcError, BadZipFile, KeyError):
             raise ValueError("Word is corrupt.")
 
         if not full_text.strip():
