@@ -2,6 +2,7 @@ from fastapi import (
     FastAPI,
     HTTPException,
     Request,
+    UploadFile,
     Form,
     Depends
     )
@@ -15,24 +16,29 @@ from src.database import (
     delete_task,
     create_user,
     verify_password,
-    get_user
+    get_user,
+    create_document
     )
 from src.schemas import (
     TaskRequest,
     TaskResponse,
     UserRequest,
     UserResponse,
+    DocumentResponse
 )
 from src.auth import(
     create_access_token,
     get_current_user
 )
+from src.processing import extract_text
 
 app = FastAPI(
     title="Smart Workspace Assistant API",
     description="REST API untuk mengelola task per-user, dengan autentikasi JWT.",
     version="2.0.0"
 )
+
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 @app.exception_handler(Exception)
 def global_exception_handler(request: Request, exc: Exception):
@@ -173,3 +179,32 @@ def delete_task_endpoint(task_id: int, current_user = Depends(get_current_user))
     deleted_task = delete_task(task_id)
 
     return deleted_task
+
+@app.post("/documents", response_model=DocumentResponse)
+def post_document_endpoint(file: UploadFile, current_user = Depends(get_current_user)):
+    """pengguna login upload file, teksnya diekstrak dan disimpan atas nama dia."""
+
+    contents = file.file.read()
+    size = len(contents)
+
+    if size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum file is 5 MB."
+        )
+    try:
+        text = extract_text(contents, file.content_type)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
+    current_user_documents = create_document(
+        file_name=file.filename,
+        content_type=file.content_type,
+        text=text,
+        user_id=current_user.id
+    )
+
+    return current_user_documents
