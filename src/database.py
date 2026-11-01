@@ -166,3 +166,13 @@ def delete_task(task_id):
         return task
     finally:
         db.close()
+
+def get_all_documents(user_id):
+    db = SessionLocal()
+    try:
+        stmt = select(Document).where(Document.user_id == user_id)
+        result = db.scalars(stmt)
+        documents = result.all()
+        return documents
+    finally:
+        db.close()
