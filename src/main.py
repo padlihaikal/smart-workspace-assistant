@@ -17,7 +17,8 @@ from src.database import (
     create_user,
     verify_password,
     get_user,
-    create_document
+    create_document,
+    get_all_documents
     )
 from src.schemas import (
     TaskRequest,
@@ -208,3 +209,7 @@ def post_document_endpoint(file: UploadFile, current_user = Depends(get_current_
     )
 
     return current_user_documents
+
+@app.get("/documents", response_model=list[DocumentResponse])
+def get_all_documents_endpoint(current_user = Depends(get_current_user)):
+    return get_all_documents(current_user.id)

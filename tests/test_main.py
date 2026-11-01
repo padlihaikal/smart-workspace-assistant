@@ -15,6 +15,25 @@ def test_get_tasks_without_token():
     response = client.get("/tasks")
     assert response.status_code == 401
 
+def get_auth_headers():
+    unique_username = f"testuser_{uuid.uuid4().hex[:8]}"
+
+    response = client.post("/users", json={
+        "username": unique_username,
+        "password": "testpass123",
+        "email": f"{unique_username}@test.com"
+        })
+    assert response.status_code == 200
+
+    response = client.post("/login", data={
+        "username": unique_username,
+        "password": "testpass123"
+    })
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+
+    return {"Authorization": f"Bearer {token}"}
+
 def test_create_user_and_login():
     unique_username = f"testuser_{uuid.uuid4().hex[:8]}"
 
@@ -129,3 +148,29 @@ def test_upload_document_success():
     assert "id" in response.json()
     assert "file_name" in response.json()
     assert "text" not in response.json()
+
+def test_get_document_without_token():
+    response = client.get("/documents")
+    assert response.status_code == 401
+
+def test_get_document_ownership():
+    headers_a = get_auth_headers()
+    
+    response = client.post(
+        "/documents",
+        files={
+            "file": ("a.txt", b"hello world", "text/plain")
+        },
+        headers=headers_a
+    )
+
+    headers_b = get_auth_headers()
+    response = client.get("/documents", headers=headers_b)
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+    response = client.get("/documents", headers=headers_a)
+
+    assert response.status_code == 200
+    assert response.json()[0]["file_name"] == "a.txt"
