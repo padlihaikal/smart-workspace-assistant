@@ -176,3 +176,13 @@ def get_all_documents(user_id):
         return documents
     finally:
         db.close()
+
+def get_document(document_id):
+    db = SessionLocal()
+    try:
+        stmt = select(Document).where(Document.id == document_id)
+        result = db.scalars(stmt)
+        document = result.first()
+        return document
+    finally:
+        db.close()
