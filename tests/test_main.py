@@ -174,3 +174,38 @@ def test_get_document_ownership():
 
     assert response.status_code == 200
     assert response.json()[0]["file_name"] == "a.txt"
+
+def test_get_document_with_id():
+    response = client.get("/documents/1")
+    assert response.status_code == 401
+
+    headers_a = get_auth_headers()
+
+    response = client.post(
+        "/documents",
+        files={
+            "file": ("a.txt", b"hello world", "text/plain")
+        },
+        headers=headers_a
+    )
+
+    assert response.status_code == 200
+    document_id = response.json()["id"]
+    
+    response = client.get(
+        f"/documents/{document_id}",
+        headers=headers_a
+        )
+
+
+    assert response.status_code == 200
+    assert response.json()["file_name"] == "a.txt"
+
+    headers_b = get_auth_headers()
+
+    response = client.get(
+        f"/documents/{document_id}",
+        headers=headers_b
+    )
+
+    assert response.status_code == 404

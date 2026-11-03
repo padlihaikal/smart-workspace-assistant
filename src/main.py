@@ -18,7 +18,8 @@ from src.database import (
     verify_password,
     get_user,
     create_document,
-    get_all_documents
+    get_all_documents,
+    get_document
     )
 from src.schemas import (
     TaskRequest,
@@ -213,3 +214,14 @@ def post_document_endpoint(file: UploadFile, current_user = Depends(get_current_
 @app.get("/documents", response_model=list[DocumentResponse])
 def get_all_documents_endpoint(current_user = Depends(get_current_user)):
     return get_all_documents(current_user.id)
+
+@app.get("/documents/{document_id}", response_model=DocumentResponse)
+def get_document_endpoint(document_id: int, current_user = Depends(get_current_user)):
+    document = get_document(document_id)
+
+    if document is None or document.user_id != current_user.id:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found."
+        )
+    return document
