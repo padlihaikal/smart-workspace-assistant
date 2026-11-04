@@ -49,6 +49,8 @@ Main features:
 - Centralized error handling, including a global exception handler
 - Automated testing with pytest
 - Auto-generated API documentation via Swagger UI
+- Document upload for PDF, DOCX, and TXT files with text extraction (maximum file size: 5 MB)
+- User-specific documents: only document owners can access their documents
 
 Technologies:
 
@@ -63,6 +65,8 @@ Technologies:
 - python-dotenv
 - pytest + httpx (testing)
 - Uvicorn
+- pypdf
+- python-docx
 
 ## Project Structure
 
@@ -75,6 +79,7 @@ smart-workspace-assistant/
 │   ├── __init__.py
 │   ├── main.py               # FastAPI app and endpoints
 │   ├── database.py           # SQLAlchemy models and queries
+│   ├── processing.py         # Document text extraction
 │   ├── schemas.py            # Pydantic request/response models
 │   └── auth.py               # JWT authentication logic
 ├── tests/
@@ -159,6 +164,9 @@ http://127.0.0.1:8000/docs
 | PUT | `/tasks/{task_id}` | Update a task (owner only) | Yes |
 | DELETE | `/tasks/{task_id}` | Delete a task (owner only) | Yes |
 | GET | `/search` | Search endpoint (in progress) | No |
+| POST | `/documents` | Upload and extract a document | Yes |
+| GET | `/documents` | Get all documents owned by the current user | Yes |
+| GET | `/documents/{document_id}` | Get a document by ID (owner only; returns 404 otherwise) | Yes |
 
 ## Database
 
@@ -175,8 +183,16 @@ Version 2.0 uses PostgreSQL, managed through SQLAlchemy ORM and versioned with A
 - `title`
 - `completed`
 - `user_id` (foreign key referencing `users.id`)
-
 Each task belongs to exactly one user. Ownership is enforced at the API layer, not just the database layer.
+
+**documents** table:
+- `id`
+- `file_name`
+- `content_type`
+- `text`
+- `user_id` (foreign key referencing `users.id`)
+- `created_at`
+Each document belongs to exactly one user. Ownership is enforced at the API layer, not just the database layer.
 
 ## Authentication
 
@@ -216,6 +232,7 @@ Tests cover:
 - Full registration → login → authenticated request flow
 - Duplicate username registration returning `409 Conflict`
 - Expired JWT access tokens returning `401 Unauthorized`
+- Document upload and ownership validation
 
 ### Separate Test Database
 
