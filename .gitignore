@@ -23,3 +23,6 @@ smart_workspace.db
 
 # Database Backup
 *.dump
+
+# Database
+chroma_db/
