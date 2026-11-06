@@ -60,3 +60,21 @@ def extract_text(content: bytes, content_type: str) -> str:
 
     else:
         raise ValueError("Unsupported file type.")
+
+
+def chunk_text(text, chunk_size=500, overlap=100):
+    if overlap >= chunk_size:
+        raise ValueError("Overlap must be smaller than chunk_size.")
+    
+    result = []
+    start = 0
+    step = chunk_size - overlap
+    
+    for start in range(0, len(text), step):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunk_result = chunk.strip()
+
+        if chunk_result:
+            result.append(chunk_result)
+    return result
