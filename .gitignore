@@ -26,3 +26,5 @@ smart_workspace.db
 
 # Database
 chroma_db/
+
+chroma_db_test

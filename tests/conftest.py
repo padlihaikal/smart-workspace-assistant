@@ -12,3 +12,4 @@ if not test_database_url.endswith("_test"):
     raise ValueError("nama database test harus berakhiran _test")
 
 os.environ["DATABASE_URL"] = test_database_url
+os.environ["CHROMA_PATH"] = "chroma_db_test"
