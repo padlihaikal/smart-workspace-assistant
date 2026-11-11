@@ -1,7 +1,8 @@
 from config.config import CHROMA_PATH
-import chromadb
 
 def get_collection():
+    import chromadb
+    
     client = chromadb.PersistentClient(path=CHROMA_PATH)
     response = client.get_or_create_collection("documents")
 
