@@ -32,7 +32,11 @@ from src.auth import(
     create_access_token,
     get_current_user
 )
-from src.processing import extract_text
+import logging
+from src.processing import extract_text, chunk_text
+from src.vector_store import add_chunks
+logger = logging.getLogger(__name__)
+
 
 app = FastAPI(
     title="Smart Workspace Assistant API",
@@ -206,8 +210,21 @@ def post_document_endpoint(file: UploadFile, current_user = Depends(get_current_
         file_name=file.filename,
         content_type=file.content_type,
         text=text,
-        user_id=current_user.id
+        user_id=current_user.id,
     )
+
+    chunks=chunk_text(text)
+
+    try:
+        add_chunks(
+            current_user.id,
+            current_user_documents.id,
+            current_user_documents.file_name,
+            chunks
+
+        )
+    except Exception:
+        logger.exception("Document indexing failed.")
 
     return current_user_documents
 

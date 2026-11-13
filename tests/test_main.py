@@ -209,3 +209,27 @@ def test_get_document_with_id():
     )
 
     assert response.status_code == 404
+
+def test_upload_indexes_document(monkeypatch):
+    calls = []
+
+    def fake_add_chunks(user_id: int, document_id: int, file_name: str, chunks: list[str]) -> None:
+        calls.append((user_id, document_id, file_name, chunks))
+
+    monkeypatch.setattr("src.main.add_chunks", fake_add_chunks)
+    header = get_auth_headers()
+    
+    response = client.post(
+        "/documents",
+        files={
+            "file": ("a.txt", b"hello world")
+        },
+        headers=header
+    )
+
+    assert response.status_code == 200
+    document_id = response.json()["id"]
+    assert len(calls) == 1
+    assert document_id == calls[0][1]
+    assert calls[0][2] == "a.txt"
+    assert calls[0][3] == ["hello world"]
