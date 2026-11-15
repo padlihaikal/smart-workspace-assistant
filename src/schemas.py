@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 class TaskRequest(BaseModel):
@@ -24,3 +24,14 @@ class DocumentResponse(BaseModel):
     file_name: str
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1)
+
+class Source(BaseModel):
+    file_name: str
+    document_id: int
+
+class AskResponse(BaseModel):
+    answer: str
+    sources: list[Source]
