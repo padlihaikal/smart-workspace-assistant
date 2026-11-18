@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt
 from config.config import SECRET_KEY
 import uuid
+from types import SimpleNamespace
 
 client = TestClient(app)
 
@@ -233,3 +234,74 @@ def test_upload_indexes_document(monkeypatch):
     assert document_id == calls[0][1]
     assert calls[0][2] == "a.txt"
     assert calls[0][3] == ["hello world"]
+
+
+def test_ask_success(monkeypatch):
+    monkeypatch.setattr(
+        "src.main.search_chunks",
+        lambda *args: [
+            SimpleNamespace(document_id=1, file_name="a.txt"),
+            SimpleNamespace(document_id=1, file_name="a.txt"),
+            SimpleNamespace(document_id=2, file_name="b.txt")
+        ]
+    )
+    monkeypatch.setattr("src.main.build_context", lambda chunks: "context")
+    monkeypatch.setattr(
+        "src.main.generate_answer",
+        lambda question, context: "Test answer [1]"
+    )
+
+    headers = get_auth_headers()
+    response = client.post(
+        "/ask",
+        json={"question": "What is this document about?"},
+        headers=headers
+    )
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "Test answer [1]"
+    assert len(response.json()["sources"]) == 2
+
+
+def test_ask_without_chunks(monkeypatch):
+    monkeypatch.setattr("src.main.search_chunks", lambda *args: [])
+    monkeypatch.setattr(
+        "src.main.generate_answer",
+        lambda *args: (_ for _ in ()).throw(AssertionError("LLM called"))
+    )
+
+    headers = get_auth_headers()
+    response = client.post(
+        "/ask",
+        json={"question": "What is this document about?"},
+        headers=headers
+    )
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "I don't know based on your documents."
+    assert response.json()["sources"] == []
+
+
+def test_ask_llm_failure(monkeypatch):
+    monkeypatch.setattr(
+        "src.main.search_chunks",
+        lambda *args: [
+            SimpleNamespace(document_id=1, file_name="a.txt")
+        ]
+    )
+    monkeypatch.setattr("src.main.build_context", lambda chunks: "context")
+
+    def fake_generate_answer(*args):
+        raise Exception("LLM connection failed")
+
+    monkeypatch.setattr("src.main.generate_answer", fake_generate_answer)
+
+    headers = get_auth_headers()
+    response = client.post(
+        "/ask",
+        json={"question": "What is this document about?"},
+        headers=headers
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Failed to generate an answer."

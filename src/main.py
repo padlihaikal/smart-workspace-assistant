@@ -26,7 +26,10 @@ from src.schemas import (
     TaskResponse,
     UserRequest,
     UserResponse,
-    DocumentResponse
+    DocumentResponse,
+    AskRequest,
+    AskResponse,
+    Source
 )
 from src.auth import(
     create_access_token,
@@ -34,7 +37,8 @@ from src.auth import(
 )
 import logging
 from src.processing import extract_text, chunk_text
-from src.vector_store import add_chunks
+from src.vector_store import add_chunks, search_chunks
+from src.llm import build_context, generate_answer
 logger = logging.getLogger(__name__)
 
 
@@ -242,3 +246,38 @@ def get_document_endpoint(document_id: int, current_user = Depends(get_current_u
             detail="Document not found."
         )
     return document
+
+@app.post("/ask", response_model=AskResponse)
+def ask(ask_request: AskRequest, current_user = Depends(get_current_user)):
+    try:
+        chunks = search_chunks(current_user.id, ask_request.question, 3)
+
+        if not chunks:
+            return AskResponse(
+                answer= "I don't know based on your documents.",  
+                sources=[]
+            )
+
+        context = build_context(chunks)
+        answer = generate_answer(ask_request.question, context)
+        sources = []
+        seen = set()
+    
+        for chunk in chunks:
+            if chunk.document_id not in seen:
+                seen.add(chunk.document_id)
+                sources.append(
+                    Source(
+                        file_name=chunk.file_name,
+                        document_id=chunk.document_id
+                    )
+                    
+                )
+        return AskResponse (answer=answer, sources=sources)
+    except Exception:
+        logger.exception("Failed to generate an answer.")
+        raise HTTPException(
+            status_code= 502,
+            detail="Failed to generate an answer."
+        )
+    
