@@ -264,12 +264,12 @@ def ask(ask_request: AskRequest, current_user = Depends(get_current_user)):
         seen = set()
     
         for chunk in chunks:
-            if chunk.document_id not in seen:
-                seen.add(chunk.document_id)
+            if chunk["document_id"] not in seen:
+                seen.add(chunk["document_id"])
                 sources.append(
                     Source(
-                        file_name=chunk.file_name,
-                        document_id=chunk.document_id
+                        file_name=chunk["file_name"],
+                        document_id=chunk["document_id"]
                     )
                     
                 )

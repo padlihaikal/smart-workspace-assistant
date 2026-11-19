@@ -240,9 +240,24 @@ def test_ask_success(monkeypatch):
     monkeypatch.setattr(
         "src.main.search_chunks",
         lambda *args: [
-            SimpleNamespace(document_id=1, file_name="a.txt"),
-            SimpleNamespace(document_id=1, file_name="a.txt"),
-            SimpleNamespace(document_id=2, file_name="b.txt")
+            {
+                "document_id": 1,
+                "file_name": "a.txt",
+                "text": "chunk_text",
+                "distance": 0.1
+            },
+            {
+                "document_id": 1,
+                "file_name": "a.txt",
+                "text": "chunk_text",
+                "distance": 0.2
+            },
+            {
+                "document_id": 2,
+                "file_name": "b.txt",
+                "text": "another_chunk",
+                "distance": 0.3
+            }
         ]
     )
     monkeypatch.setattr("src.main.build_context", lambda chunks: "context")
@@ -286,7 +301,12 @@ def test_ask_llm_failure(monkeypatch):
     monkeypatch.setattr(
         "src.main.search_chunks",
         lambda *args: [
-            SimpleNamespace(document_id=1, file_name="a.txt")
+            {
+                "document_id":1,
+                "file_name":"a.txt",
+                "text": "chunk_text",
+                "distance": 0.1
+            }
         ]
     )
     monkeypatch.setattr("src.main.build_context", lambda chunks: "context")
