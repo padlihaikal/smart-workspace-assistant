@@ -24,7 +24,11 @@ smart_workspace.db
 # Database Backup
 *.dump
 
-# Database
+# ChromaDB - Production
 chroma_db/
 
-chroma_db_test
+# ChromaDB - Test
+chroma_db_test/
+
+# ChromaDB - Evaluation
+chroma_db_eval/
