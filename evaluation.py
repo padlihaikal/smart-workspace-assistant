@@ -21,6 +21,18 @@ DOCUMENTS = {
     3: (
         "leave-policy.txt",
         "Employees are entitled to 20 days of annual leave per year."
+    ),
+    4: (
+        "password-policy.txt",
+        "Usernames are registered in the database. Passwords must contain at least three special characters."
+    ),
+    5: (
+        "claim-travel-expense.txt",
+        "Employees can submit travel expense claims whitin seven days of their trip."
+    ),
+    6: (
+        "remote-policy.txt",
+        "Staff must online for at least eight hours per day."
     )
 }
 
@@ -51,8 +63,8 @@ def run_evaluation():
     retrieval_hits = 0
     answer_hits = 0
 
-    for data in CASES:
-        question, keyword, expected_file = data
+    for test_case in CASES:
+        question, keyword, expected_file = test_case
         chunks = search_chunks(EVAL_USER_ID, question, 3)
 
         file_found = False
