@@ -51,6 +51,7 @@ Main features:
 - Auto-generated API documentation via Swagger UI
 - Document upload for PDF, DOCX, and TXT files with text extraction (maximum file size: 5 MB)
 - User-specific documents: only document owners can access their documents
+- Document-based question answering using RAG, with answers supported by document citations
 
 Technologies:
 
@@ -67,6 +68,8 @@ Technologies:
 - Uvicorn
 - pypdf
 - python-docx
+- ChromaDB
+- openai (Groq API integration)
 
 ## Project Structure
 
@@ -79,9 +82,11 @@ smart-workspace-assistant/
 │   ├── __init__.py
 │   ├── main.py               # FastAPI app and endpoints
 │   ├── database.py           # SQLAlchemy models and queries
-│   ├── processing.py         # Document text extraction
+│   ├── processing.py         # Document text extraction and chunking
 │   ├── schemas.py            # Pydantic request/response models
-│   └── auth.py               # JWT authentication logic
+│   ├── auth.py               # JWT authentication logic
+│   ├── llm.py                # Context building and LLM answer generation
+│   └── vector_store.py       # Vector storage and similarity search
 ├── tests/
 │   ├── test_main.py          # pytest test suite
 │   └── conftest.py
@@ -89,6 +94,7 @@ smart-workspace-assistant/
 ├── .gitignore
 ├── .env                      # Not committed (see .gitignore)
 ├── .env.example
+├── evaluation.py             # RAG retrieval and answer evaluation
 ├── LICENSE
 ├── README.md
 └── requirements.txt
@@ -120,6 +126,8 @@ Create a `.env` file in the project root using `.env.example` as a template. Con
 DATABASE_URL=postgresql+psycopg://postgres:your-password-here@localhost/smart_workspace
 TEST_DATABASE_URL=postgresql+psycopg://postgres:your-password-here@localhost:5432/smart_workspace_test
 SECRET_KEY=your-secret-key-here
+CHROMA_PATH=chroma_db
+GROQ_API_KEY=your-groq-api-key-here
 ```
 
 Replace the placeholder values with your local database credentials and a secure secret key. Do not commit real passwords or secrets to version control.
@@ -167,6 +175,7 @@ http://127.0.0.1:8000/docs
 | POST | `/documents` | Upload and extract a document | Yes |
 | GET | `/documents` | Get all documents owned by the current user | Yes |
 | GET | `/documents/{document_id}` | Get a document by ID (owner only; returns 404 otherwise) | Yes |
+| POST | `/ask` | Ask a question about your own documents | Yes |
 
 ## Database
 
@@ -234,6 +243,25 @@ Tests cover:
 - Expired JWT access tokens returning `401 Unauthorized`
 - Document upload and ownership validation
 
+## Evaluation
+
+The RAG pipeline is evaluated using a small dataset of questions to measure retrieval and answer performance.
+
+Run the evaluation script:
+
+```powershell
+python evaluation.py
+```
+Evaluation results using six sample documents:
+
+- Retrieval: 3/3
+- Answer: 3/3
+
+Limitations:
+- The evaluation dataset is small and does not represent all possible questions.
+- LLM-generated answers are not deterministic and may vary between runs.
+- Keyword-based answer evaluation does not guarantee factual accuracy.
+
 ### Separate Test Database
 
 Tests use a separate PostgreSQL database named `smart_workspace_test`. The test database name must end with `_test` to help prevent tests from running against the development database.
@@ -250,6 +278,9 @@ Before running tests, create the test database and run `alembic upgrade head` wi
 - Expand test coverage (404, PUT, DELETE flows)
 - Deploy to a cloud environment
 - Integration with AI applications / AI agents
+- Retry document indexing when indexing fails
+- Delete associated vectors when a document is deleted
+- Improve token management for LLM context and generation
 
 ## Author
 
