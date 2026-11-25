@@ -130,7 +130,7 @@ CHROMA_PATH=chroma_db
 GROQ_API_KEY=your-groq-api-key-here
 ```
 
-Replace the placeholder values with your local database credentials and a secure secret key. Do not commit real passwords or secrets to version control.
+Replace the placeholder values with your local database credentials, a secure secret key, and your Groq API key. Do not commit real passwords or secrets to version control.
 
 Run database migrations:
 
@@ -242,6 +242,15 @@ Tests cover:
 - Duplicate username registration returning `409 Conflict`
 - Expired JWT access tokens returning `401 Unauthorized`
 - Document upload and ownership validation
+- Document question answering with mocked retrieval and LLM components
+
+### Separate Test Database
+
+Tests use a separate PostgreSQL database named `smart_workspace_test`. The test database name must end with `_test` to help prevent tests from running against the development database.
+
+### Test Database Setup
+
+Before running tests, create the test database and run `alembic upgrade head` with `DATABASE_URL` pointing to the test database. Set `TEST_DATABASE_URL` in the `.env` file to the test database connection URL.
 
 ## Evaluation
 
@@ -261,14 +270,6 @@ Limitations:
 - The evaluation dataset is small and does not represent all possible questions.
 - LLM-generated answers are not deterministic and may vary between runs.
 - Keyword-based answer evaluation does not guarantee factual accuracy.
-
-### Separate Test Database
-
-Tests use a separate PostgreSQL database named `smart_workspace_test`. The test database name must end with `_test` to help prevent tests from running against the development database.
-
-### Test Database Setup
-
-Before running tests, create the test database and run `alembic upgrade head` with `DATABASE_URL` pointing to the test database. Set `TEST_DATABASE_URL` in the `.env` file to the test database connection URL.
 
 ## Future Improvement
 
